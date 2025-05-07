@@ -4,7 +4,7 @@ Un installateur de polices Windows en PowerShell avec interface graphique.
 
 ## Utilisation
 
-1. Téléchargez le script `FontInstaller.ps1`
+1. Téléchargez le script `FontUltraInstaller.ps1`
 2. Exécutez-le avec PowerShell en tant qu’administrateur
 
 ## Fonctionnalités
