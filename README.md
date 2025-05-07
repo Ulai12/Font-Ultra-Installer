@@ -1,4 +1,4 @@
-# FontInstaller
+# Font Ultra Installer
 
 Un installateur de polices Windows en PowerShell avec interface graphique.
 
