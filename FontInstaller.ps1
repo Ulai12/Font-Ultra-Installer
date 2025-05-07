@@ -19,6 +19,7 @@ $script:CONFIG = @{
     SupportedExtensions = @('.ttf', '.otf', '.fon', '.woff', '.woff2')
     UpdateCheckUrl = "https://api.github.com/repos/yourusername/fontinstaller/releases/latest"
     Theme = "Light" # Light ou Dark
+    MaxFontSize = 300MB # Taille maximale d'une police
 }
 
 # Dictionnaire des traductions
@@ -118,21 +119,44 @@ function Install-Font {
         
         $dest = Join-Path $env:WINDIR\Fonts $Font.Name
         if (-not (Test-Path $dest)) {
-            Copy-Item -Path $Font.FullName -Destination $dest -ErrorAction Stop
-            $regName = if ($Font.Extension -ieq '.otf') { 
-                "$($Font.BaseName) (OpenType)" 
-            } else { 
-                "$($Font.BaseName) (TrueType)" 
+            # Vérification de l'espace disque disponible
+            $drive = Get-PSDrive -PSProvider FileSystem | Where-Object { $env:WINDIR.StartsWith($_.Root) }
+            if ($drive.Free -lt $Font.Length) {
+                Write-Log "Espace disque insuffisant pour installer $($Font.Name)"
+                $listView.Items.Add([PSCustomObject]@{
+                    Name = $Font.Name
+                    Status = "Échec (Espace insuffisant)"
+                    Type = $Font.Extension
+                })
+                return $false
             }
-            New-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts' `
-                            -Name $regName -PropertyType String -Value $Font.Name -Force | Out-Null
-            Write-Log "Installé: $($Font.Name)"
-            $listView.Items.Add([PSCustomObject]@{
-                Name = $Font.Name
-                Status = "Installé"
-                Type = $Font.Extension
-            })
-            return $true
+
+            Copy-Item -Path $Font.FullName -Destination $dest -ErrorAction Stop
+            $regName = switch ($Font.Extension.ToLower()) {
+                '.otf' { "$($Font.BaseName) (OpenType)" }
+                '.woff' { "$($Font.BaseName) (WOFF)" }
+                '.woff2' { "$($Font.BaseName) (WOFF2)" }
+                default { "$($Font.BaseName) (TrueType)" }
+            }
+            
+            try {
+                New-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts' `
+                                -Name $regName -PropertyType String -Value $Font.Name -Force | Out-Null
+                Write-Log "Installé: $($Font.Name)"
+                $listView.Items.Add([PSCustomObject]@{
+                    Name = $Font.Name
+                    Status = "Installé"
+                    Type = $Font.Extension
+                })
+                return $true
+            }
+            catch {
+                # Nettoyage en cas d'échec de l'enregistrement
+                if (Test-Path $dest) {
+                    Remove-Item $dest -Force
+                }
+                throw
+            }
         }
         Write-Log "Déjà installé: $($Font.Name)"
         $listView.Items.Add([PSCustomObject]@{
@@ -150,7 +174,7 @@ function Install-Font {
             Type = $Font.Extension
         })
         [System.Windows.Forms.MessageBox]::Show(
-            "Erreur lors de l'installation de $($Font.Name)",
+            "Erreur lors de l'installation de $($Font.Name)`n`nDétails: $_",
             "Erreur",
             [System.Windows.Forms.MessageBoxButtons]::OK,
             [System.Windows.Forms.MessageBoxIcon]::Error)
@@ -163,18 +187,38 @@ function Test-FontFile {
         [System.IO.FileInfo]$Font
     )
     try {
-        $stream = [System.IO.File]::OpenRead($Font.FullName)
-        if ($Font.Extension -ieq '.ttf' -or $Font.Extension -ieq '.otf') {
-            # Vérification de la signature des polices
-            $buffer = New-Object byte[] 4
-            $stream.Read($buffer, 0, 4) | Out-Null
-            $signature = [System.Text.Encoding]::ASCII.GetString($buffer)
-            $stream.Close()
-            
-            return $signature -match '(OTTO|true|typ1)'
+        # Vérification de la taille du fichier
+        if ($Font.Length -gt $script:CONFIG.MaxFontSize) {
+            Write-Log "Police trop volumineuse: $($Font.Name) ($([math]::Round($Font.Length/1MB, 2)) MB)"
+            return $false
         }
-        $stream.Close()
-        return $true
+
+        # Vérification de l'extension
+        if (-not ($script:CONFIG.SupportedExtensions -contains $Font.Extension.ToLower())) {
+            Write-Log "Extension non supportée: $($Font.Extension)"
+            return $false
+        }
+
+        # Vérification de la signature du fichier
+        $stream = [System.IO.File]::OpenRead($Font.FullName)
+        try {
+            if ($Font.Extension -ieq '.ttf' -or $Font.Extension -ieq '.otf') {
+                $buffer = New-Object byte[] 4
+                $stream.Read($buffer, 0, 4) | Out-Null
+                $signature = [System.Text.Encoding]::ASCII.GetString($buffer)
+                return $signature -match '(OTTO|true|typ1)'
+            }
+            elseif ($Font.Extension -ieq '.woff' -or $Font.Extension -ieq '.woff2') {
+                $buffer = New-Object byte[] 4
+                $stream.Read($buffer, 0, 4) | Out-Null
+                $signature = [System.Text.Encoding]::ASCII.GetString($buffer)
+                return $signature -match 'wOFF'
+            }
+            return $true
+        }
+        finally {
+            $stream.Close()
+        }
     }
     catch {
         Write-Log "Erreur de validation pour $($Font.Name): $_"
@@ -255,7 +299,7 @@ $form.StartPosition = 'CenterScreen'
 $form.AllowDrop = $true
 
 # Application du thème
-function Apply-Theme {
+function Set-Theme {
     param($form)
     if ($script:CONFIG.Theme -eq "Dark") {
         $form.BackColor = [System.Drawing.Color]::FromArgb(45, 45, 48)
@@ -315,20 +359,27 @@ $btnTheme.Size = New-Object System.Drawing.Size(200, 30)
 $btnTheme.Add_Click({
     $script:CONFIG.Theme = if ($script:CONFIG.Theme -eq "Light") { "Dark" } else { "Light" }
     $btnTheme.Text = if ($script:CONFIG.Theme -eq "Light") { $script:TRANSLATIONS[$script:CurrentLanguage]['ThemeDark'] } else { $script:TRANSLATIONS[$script:CurrentLanguage]['ThemeLight'] }
-    Apply-Theme $form
+    Set-Theme $form
 })
 $form.Controls.Add($btnTheme)
 
 # Gestion du glisser-déposer
 $form.Add_DragEnter({
-    param($sender, $e)
+    param($source, $e)
     if ($e.Data.GetDataPresent([Windows.Forms.DataFormats]::FileDrop)) {
-        $e.Effect = [Windows.Forms.DragDropEffects]::Copy
+        $files = $e.Data.GetData([Windows.Forms.DataFormats]::FileDrop)
+        $validFiles = $files | Where-Object {
+            $ext = [System.IO.Path]::GetExtension($_).ToLower()
+            $script:CONFIG.SupportedExtensions -contains $ext
+        }
+        if ($validFiles.Count -gt 0) {
+            $e.Effect = [Windows.Forms.DragDropEffects]::Copy
+        }
     }
 })
 
 $form.Add_DragDrop({
-    param($sender, $e)
+    param($source, $e)
     $files = $e.Data.GetData([Windows.Forms.DataFormats]::FileDrop)
     if ($files) {
         $folder = if ((Get-Item $files[0]) -is [System.IO.DirectoryInfo]) {
@@ -343,9 +394,9 @@ $form.Add_DragDrop({
 })
 
 # Vérification des mises à jour
-function Check-ForUpdates {
+function Test-ForUpdates {
     try {
-        $response = Invoke-RestMethod -Uri $script:CONFIG.UpdateCheckUrl
+        $response = Invoke-RestMethod -Uri $script:CONFIG.UpdateCheckUrl -ErrorAction Stop
         $latestVersion = $response.tag_name.TrimStart('v')
         if ($latestVersion -gt $script:CONFIG.Version) {
             $result = [System.Windows.Forms.MessageBox]::Show(
@@ -361,6 +412,7 @@ function Check-ForUpdates {
     }
     catch {
         Write-Log "Erreur lors de la vérification des mises à jour: $_"
+        # Ne pas afficher l'erreur à l'utilisateur pour ne pas perturber l'expérience
     }
 }
 
@@ -569,13 +621,16 @@ $form.Add_FormClosing({
     $btnBrowse.Dispose()
     $btnCancel.Dispose()
     $comboLanguage.Dispose()
+    $listView.Dispose()
+    $btnOpenFontsFolder.Dispose()
+    $btnTheme.Dispose()
 })
 
 # Vérification des mises à jour au démarrage
-Check-ForUpdates
+Test-ForUpdates
 
 # Application du thème initial
-Apply-Theme $form
+Set-Theme $form
 
 # Afficher la fenêtre
 [void] $form.ShowDialog()
