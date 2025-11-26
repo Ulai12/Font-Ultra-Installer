@@ -139,6 +139,9 @@ class VersusComparerPage(QFrame):
         font2_name = self.font2Combo.currentText()
         text = self.previewText.text()
 
+        if not font1_name or not font2_name:
+            return
+
         if not text:
             text = tr("pangram")
 

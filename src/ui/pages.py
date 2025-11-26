@@ -66,8 +66,7 @@ class HomePage(QFrame):
         self.btnClear.clicked.connect(self.clear_list)
         actionLayout.addWidget(self.btnClear)
 
-        self.btnRefresh = ToolButton(FIF.SYNC, self)
-        self.btnRefresh.setToolTip(tr("refresh"))
+        self.btnRefresh = PushButton(FIF.SYNC, tr("refresh"), self)
         self.btnRefresh.clicked.connect(self.clear_list)
         actionLayout.addWidget(self.btnRefresh)
 

@@ -2,7 +2,7 @@ import sys
 import os
 
 from PySide6.QtCore import Qt, QPropertyAnimation, QEasingCurve, QTimer
-from PySide6.QtGui import QIcon, QPixmap
+from PySide6.QtGui import QIcon, QPixmap, QFontDatabase
 from PySide6.QtWidgets import QApplication, QLabel, QGraphicsOpacityEffect
 from qfluentwidgets import (
     FluentWindow, NavigationItemPosition, FluentIcon as FIF,
@@ -58,58 +58,45 @@ class MainWindow(FluentWindow):
             self.anim_timer.start(3000)  # Animate every 3 seconds
             self.anim_value = 0
 
-        # Global stylesheet for glass effects and scrollbars
-        self.setStyleSheet("""
-            QScrollBar:vertical {
-                background: transparent;
-                width: 8px;
-                margin: 0;
-            }
-            QScrollBar::handle:vertical {
-                background: rgba(255, 255, 255, 0.2);
-                min-height: 20px;
-                border-radius: 4px;
-            }
-            QScrollBar::handle:vertical:hover {
-                background: rgba(255, 255, 255, 0.3);
-            }
-            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
-                height: 0px;
-            }
-            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
-                background: transparent;
-            }
-        """)
+        # Load custom fonts FIRST
+        self.load_custom_fonts()
 
-        self.homeInterface = HomePage(self)
-        self.libraryInterface = LibraryPage(self)
-        self.googleFontsInterface = GoogleFontsPage(self)
-        self.inspectorInterface = GlyphInspectorPage(self)
-        self.typewriterInterface = TypewriterPage(self)
-        self.comparerInterface = VersusComparerPage(self)
-        # self.pairingInterface = FontPairingPage(self)
-        self.settingsInterface = SettingsPage(self)
-        self.aboutInterface = AboutPage(self)
-
-        self.addSubInterface(self.homeInterface, FIF.HOME, tr("home"))
-        self.addSubInterface(self.libraryInterface, FIF.LIBRARY, tr("library"))
-        self.addSubInterface(self.googleFontsInterface, FIF.SHOPPING_CART, tr("store"))
-        self.addSubInterface(self.inspectorInterface, FIF.SEARCH, tr("inspector"))
-        self.addSubInterface(self.typewriterInterface, FIF.EDIT, tr("type writer"))
-        self.addSubInterface(self.comparerInterface, FIF.VIEW, tr("versus"))
-        # self.addSubInterface(self.pairingInterface, FIF.PALETTE, tr("pairing"))
-        if os.path.exists(bg_path):
-            pixmap = QPixmap(bg_path)
-            self.bg_label.setPixmap(pixmap)
+        # Set System Accent Color BEFORE creating interfaces
+        try:
+            import winreg
+            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\DWM")
+            value, _ = winreg.QueryValueEx(key, "AccentColor")
+            r = value & 0xFF
+            g = (value >> 8) & 0xFF
+            b = (value >> 16) & 0xFF
+            accent_color = f"#{r:02x}{g:02x}{b:02x}"
+            setThemeColor(accent_color)
+        except Exception:
+            pass
 
         # Dynamic Glass Stylesheet
-        text_color = "white" if is_dark else "black"
-        combo_bg = "rgba(255, 255, 255, 0.05)" if is_dark else "rgba(255, 255, 255, 0.5)"
-        combo_border = "rgba(255, 255, 255, 0.1)" if is_dark else "rgba(0, 0, 0, 0.1)"
-        popup_bg = "rgba(32, 32, 32, 0.95)" if is_dark else "rgba(240, 240, 240, 0.95)"
-        item_hover = "rgba(255, 255, 255, 0.1)" if is_dark else "rgba(0, 0, 0, 0.05)"
-        nav_bg = "rgba(32, 32, 32, 0.8)" if is_dark else "rgba(240, 240, 240, 0.8)"
-        nav_border = "rgba(255, 255, 255, 0.05)" if is_dark else "rgba(0, 0, 0, 0.05)"
+        is_dark = isDarkTheme()
+
+        # Custom Colors
+        dark_base = "#0d0c07"
+        light_base = "#fffce1"
+
+        if is_dark:
+            text_color = light_base
+            nav_bg = "rgba(13, 12, 7, 0.85)"
+            popup_bg = "rgba(13, 12, 7, 0.95)"
+            combo_bg = "rgba(255, 255, 255, 0.05)"
+            combo_border = "rgba(255, 255, 255, 0.1)"
+            item_hover = "rgba(255, 255, 255, 0.1)"
+            nav_border = "rgba(255, 255, 255, 0.05)"
+        else:
+            text_color = dark_base
+            nav_bg = "rgba(255, 252, 225, 0.85)"
+            popup_bg = "rgba(255, 252, 225, 0.95)"
+            combo_bg = "rgba(255, 255, 255, 0.5)"
+            combo_border = "rgba(0, 0, 0, 0.1)"
+            item_hover = "rgba(0, 0, 0, 0.05)"
+            nav_border = "rgba(0, 0, 0, 0.05)"
 
         glass_style = f"""
             QScrollBar:vertical {{
@@ -132,10 +119,23 @@ class MainWindow(FluentWindow):
                 background: transparent;
             }}
 
-            /* Navigation Menu Glass Effect */
-            NavigationPanel {{
-                background-color: {nav_bg};
-                border-right: 1px solid {nav_border};
+            /* Title Font - Bowlby One SC */
+            TitleLabel {{
+                font-family: "{self.fonts['Title']}";
+                font-size: 36px;
+                font-weight: 900;
+                letter-spacing: 1px;
+            }}
+
+            /* Subtitle Font - Avenir */
+            SubtitleLabel, StrongBodyLabel {{
+                font-family: "{self.fonts['Subtitle']}";
+                font-weight: bold;
+            }}
+
+            /* Body Font - Avenir */
+            BodyLabel, CaptionLabel, QLabel, QPushButton, QLineEdit {{
+                font-family: "{self.fonts['Body']}";
             }}
 
             NavigationInterface, NavigationWidget {{
@@ -181,6 +181,75 @@ class MainWindow(FluentWindow):
             }}
         """
         self.setStyleSheet(glass_style)
+
+        # NOW create interfaces AFTER fonts are loaded and stylesheet is applied
+        self.homeInterface = HomePage(self)
+        self.libraryInterface = LibraryPage(self)
+        self.googleFontsInterface = GoogleFontsPage(self)
+        self.inspectorInterface = GlyphInspectorPage(self)
+        self.typewriterInterface = TypewriterPage(self)
+        self.comparerInterface = VersusComparerPage(self)
+        # self.pairingInterface = FontPairingPage(self)
+        self.settingsInterface = SettingsPage(self)
+        self.aboutInterface = AboutPage(self)
+
+        self.addSubInterface(self.homeInterface, FIF.HOME, tr("home"))
+        self.addSubInterface(self.libraryInterface, FIF.LIBRARY, tr("library"))
+        self.addSubInterface(self.googleFontsInterface, FIF.SHOPPING_CART, tr("store"))
+        self.addSubInterface(self.inspectorInterface, FIF.SEARCH, tr("inspector"))
+        self.addSubInterface(self.typewriterInterface, FIF.EDIT, tr("type writer"))
+        self.addSubInterface(self.comparerInterface, FIF.VIEW, tr("versus"))
+        # self.addSubInterface(self.pairingInterface, FIF.PALETTE, tr("pairing"))
+
+        self.addSubInterface(self.settingsInterface, FIF.SETTING, tr("settings"), NavigationItemPosition.BOTTOM)
+        self.addSubInterface(self.aboutInterface, FIF.INFO, tr("about"), NavigationItemPosition.BOTTOM)
+
+    def load_custom_fonts(self):
+        """Charger toutes les polices personnalisées depuis assets"""
+        self.fonts = {
+            "Title": "Segoe UI",
+            "Subtitle": "Segoe UI",
+            "Body": "Segoe UI",
+            "Mono": "Consolas"
+        }
+
+        assets_dir = os.path.join(BASE_DIR, "assets")
+
+        def find_font_path(filename):
+            for root, dirs, files in os.walk(assets_dir):
+                if filename in files:
+                    return os.path.join(root, filename)
+            return None
+
+        # Map font types to filenames
+        font_files = {
+            "Title": "BowlbyOneSC-Regular.ttf",
+            "Subtitle": "AvenirLTStd-Black.otf",
+            "Body": "AvenirLTStd-Roman.otf",
+            "Mono": "Inconsolata-Regular.ttf"
+        }
+
+        for key, filename in font_files.items():
+            path = find_font_path(filename)
+            if path and os.path.exists(path):
+                font_id = QFontDatabase.addApplicationFont(path)
+                if font_id != -1:
+                    families = QFontDatabase.applicationFontFamilies(font_id)
+                    if families:
+                        self.fonts[key] = families[0]
+                        print(f"Police {key} chargée: {families[0]} depuis {path}")
+            else:
+                print(f"Fichier de police non trouvé: {filename}")
+
+    def update_background(self):
+        """Mettre à jour l'image de fond en fonction du thème"""
+        is_dark = isDarkTheme()
+        bg_file = "liquid_bg_dark.png" if is_dark else "liquid_bg_light.png"
+        bg_path = os.path.join(BASE_DIR, "assets", bg_file)
+
+        if os.path.exists(bg_path):
+            pixmap = QPixmap(bg_path)
+            self.bg_label.setPixmap(pixmap)
 
     def animate_background(self):
         """Smooth opacity animation for liquid effect"""

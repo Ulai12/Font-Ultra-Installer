@@ -64,49 +64,55 @@ class GlyphInspectorPage(QFrame):
     def load_glyphs(self, font_family):
         # Clear grid
         for i in reversed(range(self.gridLayout.count())):
-            self.gridLayout.itemAt(i).widget().setParent(None)
+            widget = self.gridLayout.itemAt(i).widget()
+            if widget:
+                widget.setParent(None)
 
-        if not font_family: return
+        if not font_family or font_family == "":
+            return
 
-        font = QFont(font_family, 24)
+        try:
+            font = QFont(font_family, 24)
 
-        # Display a range of common glyphs
-        row = 0
-        col = 0
-        max_cols = 8
+            # Display a range of common glyphs
+            row = 0
+            col = 0
+            max_cols = 8
 
-        # ASCII + Latin-1 Supplement + Common Symbols
-        ranges = [(33, 126), (161, 255), (0x20A0, 0x20CF)]
+            # ASCII + Latin-1 Supplement + Common Symbols
+            ranges = [(33, 126), (161, 255), (0x20A0, 0x20CF)]
 
-        for start, end in ranges:
-            for code in range(start, end + 1):
-                char = chr(code)
+            for start, end in ranges:
+                for code in range(start, end + 1):
+                    char = chr(code)
 
-                card = CardWidget(self.scrollContent)
-                card.setFixedSize(80, 80)
-                card.setStyleSheet("""
-                    CardWidget {
-                        background-color: rgba(255, 255, 255, 0.05);
-                        border: 1px solid rgba(255, 255, 255, 0.1);
-                        border-radius: 8px;
-                    }
-                    CardWidget:hover {
-                        background-color: rgba(255, 255, 255, 0.1);
-                        border: 1px solid rgba(255, 255, 255, 0.3);
-                    }
-                """)
+                    card = CardWidget(self.scrollContent)
+                    card.setFixedSize(80, 80)
+                    card.setStyleSheet("""
+                        CardWidget {
+                            background-color: rgba(255, 255, 255, 0.05);
+                            border: 1px solid rgba(255, 255, 255, 0.1);
+                            border-radius: 8px;
+                        }
+                        CardWidget:hover {
+                            background-color: rgba(255, 255, 255, 0.1);
+                            border: 1px solid rgba(255, 255, 255, 0.3);
+                        }
+                    """)
 
-                layout = QVBoxLayout(card)
-                layout.setAlignment(Qt.AlignCenter)
+                    layout = QVBoxLayout(card)
+                    layout.setAlignment(Qt.AlignCenter)
 
-                lbl = QLabel(char, card)
-                lbl.setFont(font)
-                lbl.setAlignment(Qt.AlignCenter)
-                layout.addWidget(lbl)
+                    lbl = QLabel(char, card)
+                    lbl.setFont(font)
+                    lbl.setAlignment(Qt.AlignCenter)
+                    layout.addWidget(lbl)
 
-                self.gridLayout.addWidget(card, row, col)
+                    self.gridLayout.addWidget(card, row, col)
 
-                col += 1
-                if col >= max_cols:
-                    col = 0
-                    row += 1
+                    col += 1
+                    if col >= max_cols:
+                        col = 0
+                        row += 1
+        except Exception as e:
+            print(f"Erreur lors du chargement des glyphes: {e}")
