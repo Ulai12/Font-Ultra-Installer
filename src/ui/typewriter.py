@@ -1,4 +1,5 @@
 import sys
+import os
 from PySide6.QtCore import Qt, QUrl
 from PySide6.QtGui import QFont, QFontDatabase, QTextOption
 from PySide6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QTextEdit, QSlider, QLabel
@@ -7,7 +8,13 @@ from qfluentwidgets import (
     TitleLabel, ComboBox, ToolButton, FluentIcon as FIF,
     Slider, SwitchButton, isDarkTheme
 )
-from config import tr
+from config import tr, BASE_DIR, BOWLBY_FONT_PATH
+
+def _apply_bowlby_font(label):
+    """Apply Bowlby One SC font to a title label via stylesheet"""
+    if os.path.exists(BOWLBY_FONT_PATH):
+        QFontDatabase.addApplicationFont(BOWLBY_FONT_PATH)
+        label.setStyleSheet("font-family: 'Bowlby One SC'; font-size: 32px;")
 
 class TypewriterPage(QFrame):
     def __init__(self, parent=None):
@@ -21,6 +28,7 @@ class TypewriterPage(QFrame):
 
         # Header
         self.titleLabel = TitleLabel(tr("typewriter_mode").upper(), self)
+        _apply_bowlby_font(self.titleLabel)
         self.vBoxLayout.addWidget(self.titleLabel, 0, Qt.AlignCenter)
 
         # Toolbar

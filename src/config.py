@@ -8,6 +8,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BIN_DIR = os.path.join(BASE_DIR, 'bin')
 FONT_TOOL = os.path.join(BIN_DIR, 'font_tool.exe')
 SYSTEM_OPS = os.path.join(BIN_DIR, 'SystemOps.ps1')
+BOWLBY_FONT_PATH = os.path.join(BASE_DIR, 'assets', 'Fonts', 'Bowlby_One_SC', 'BowlbyOneSC-Regular.ttf')
 
 # --- Settings ---
 SETTINGS = {
@@ -58,7 +59,7 @@ def tr(key):
     if lang == "System":
         sys_lang = locale.getdefaultlocale()[0]
         lang = "fr" if sys_lang and sys_lang.startswith("fr") else "en"
-    
+
     return TRANSLATIONS.get(lang, TRANSLATIONS["en"]).get(key, key)
 
 # Settings file path

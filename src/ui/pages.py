@@ -1,6 +1,6 @@
 import os
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QIcon, QDragEnterEvent, QDropEvent
+from PySide6.QtGui import QIcon, QDragEnterEvent, QDropEvent, QFont, QFontDatabase
 from PySide6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QWidget, QFileDialog
 from qfluentwidgets import (
     TitleLabel, SubtitleLabel, BodyLabel, CaptionLabel,
@@ -9,12 +9,18 @@ from qfluentwidgets import (
     MessageBox, InfoBar, InfoBarPosition, Theme, setTheme, FluentIcon as FIF
 )
 
-from config import tr, SETTINGS, GOOGLE_FONTS, BASE_DIR
+from config import tr, SETTINGS, GOOGLE_FONTS, BASE_DIR, BOWLBY_FONT_PATH
 from core import (
     AnalyzeWorker, InstallWorker, LoadLibraryWorker, DownloadWorker, GoogleFontsWorker,
     uninstall_font_system, restart_explorer, install_font_system
 )
 from ui.components import FontCard, LibraryCard, GoogleFontCard
+
+def _apply_bowlby_font(label):
+    """Apply Bowlby One SC font to a title label via stylesheet"""
+    if os.path.exists(BOWLBY_FONT_PATH):
+        QFontDatabase.addApplicationFont(BOWLBY_FONT_PATH)
+        label.setStyleSheet("font-family: 'Bowlby One SC'; font-size: 32px;")
 
 class HomePage(QFrame):
     def __init__(self, parent=None):
@@ -26,6 +32,7 @@ class HomePage(QFrame):
         self.vBoxLayout.setSpacing(20)
 
         self.titleLabel = TitleLabel(tr("window_title").upper(), self)
+        _apply_bowlby_font(self.titleLabel)
         self.vBoxLayout.addWidget(self.titleLabel, 0, Qt.AlignCenter)
 
         self.dropArea = CardWidget(self)
@@ -198,6 +205,7 @@ class LibraryPage(QFrame):
         self.vBoxLayout.setSpacing(20)
 
         self.titleLabel = TitleLabel(tr("library").upper(), self)
+        _apply_bowlby_font(self.titleLabel)
         self.vBoxLayout.addWidget(self.titleLabel, 0, Qt.AlignCenter)
 
         # Toolbar
@@ -281,6 +289,7 @@ class GoogleFontsPage(QFrame):
         self.vBoxLayout.setSpacing(20)
 
         self.titleLabel = TitleLabel(tr("store").upper(), self)
+        _apply_bowlby_font(self.titleLabel)
         self.vBoxLayout.addWidget(self.titleLabel, 0, Qt.AlignCenter)
 
         # Toolbar
@@ -411,6 +420,7 @@ class SettingsPage(QFrame):
         self.vBoxLayout.setAlignment(Qt.AlignTop)
 
         self.titleLabel = TitleLabel(tr("settings").upper(), self)
+        _apply_bowlby_font(self.titleLabel)
         self.vBoxLayout.addWidget(self.titleLabel, 0, Qt.AlignCenter)
 
         # Theme
@@ -544,6 +554,7 @@ class AboutPage(QFrame):
         self.vBoxLayout.setAlignment(Qt.AlignTop)
 
         self.titleLabel = TitleLabel(tr("about").upper(), self)
+        _apply_bowlby_font(self.titleLabel)
         self.vBoxLayout.addWidget(self.titleLabel, 0, Qt.AlignCenter)
 
         self.card = CardWidget(self)

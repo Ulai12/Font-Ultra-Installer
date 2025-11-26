@@ -1,4 +1,5 @@
 import sys
+import os
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QFont, QFontDatabase
 from PySide6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QWidget, QGridLayout, QLabel, QScrollArea
@@ -6,7 +7,13 @@ from qfluentwidgets import (
     TitleLabel, SubtitleLabel, ComboBox, CardWidget, FluentIcon as FIF,
     ToolButton, SearchLineEdit, ScrollArea
 )
-from config import tr
+from config import tr, BASE_DIR, BOWLBY_FONT_PATH
+
+def _apply_bowlby_font(label):
+    """Apply Bowlby One SC font to a title label via stylesheet"""
+    if os.path.exists(BOWLBY_FONT_PATH):
+        QFontDatabase.addApplicationFont(BOWLBY_FONT_PATH)
+        label.setStyleSheet("font-family: 'Bowlby One SC'; font-size: 32px;")
 
 class GlyphInspectorPage(QFrame):
     def __init__(self, parent=None):
@@ -19,6 +26,7 @@ class GlyphInspectorPage(QFrame):
         self.vBoxLayout.setSpacing(20)
 
         self.titleLabel = TitleLabel(tr("inspector").upper(), self)
+        _apply_bowlby_font(self.titleLabel)
         self.vBoxLayout.addWidget(self.titleLabel, 0, Qt.AlignCenter)
 
         # Toolbar

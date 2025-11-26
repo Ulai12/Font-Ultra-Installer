@@ -1,7 +1,7 @@
 import os
 from PySide6.QtCore import Qt, QPropertyAnimation, QEasingCurve, Signal, QPoint
 from PySide6.QtGui import QFont, QColor, QClipboard
-from PySide6.QtWidgets import QHBoxLayout, QVBoxLayout, QApplication
+from PySide6.QtWidgets import QHBoxLayout, QVBoxLayout, QApplication, QWidget
 from qfluentwidgets import (
     CardWidget, IconWidget, ImageLabel, BodyLabel, CaptionLabel,
     SubtitleLabel, PushButton, ToolButton, FluentIcon as FIF
@@ -31,7 +31,7 @@ class FontCard(CardWidget):
 
         self.anim = QPropertyAnimation(self, b"pos")
         self.anim.setDuration(400)
-        self.anim.setEasingCurve(QEasingCurve.OutQuart)
+        self.anim.setEasingCurve(QEasingCurve.Type.OutQuart)
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(16, 16, 16, 16)
@@ -40,7 +40,7 @@ class FontCard(CardWidget):
         # Use simple icon initially, preview will be set later if available
         self.icon_widget = IconWidget(FIF.FONT_SIZE)
         self.icon_widget.setFixedSize(48, 48)
-        self.icon_widget.setAttribute(Qt.WA_TransparentForMouseEvents)
+        self.icon_widget.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
 
         # If preview pixmap is already in font_data, use it
         try:
@@ -48,7 +48,7 @@ class FontCard(CardWidget):
                 self.icon_widget = ImageLabel(image=font_data['preview_pixmap'], parent=self)
                 self.icon_widget.setFixedSize(200, 48)
                 self.icon_widget.scaledToHeight(48)
-                self.icon_widget.setAttribute(Qt.WA_TransparentForMouseEvents)
+                self.icon_widget.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         except Exception as e:
             # Keep default icon if preview fails
             pass
@@ -76,13 +76,16 @@ class FontCard(CardWidget):
             size_kb = 0
 
         self.title_lbl = BodyLabel(family, self)
-        self.title_lbl.setFont(QFont("Segoe UI Variable Display", 14, QFont.Bold))
-        self.title_lbl.setAttribute(Qt.WA_TransparentForMouseEvents)
+        font = QFont("Segoe UI Variable Display", 14)
+        font.setBold(True)
+        self.title_lbl.setFont(font)
+        self.title_lbl.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        self.title_lbl.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         info_layout.addWidget(self.title_lbl)
 
         self.subtitle_lbl = CaptionLabel(f"{style} • {size_kb} KB", self)
         self.subtitle_lbl.setTextColor(QColor(120, 120, 120), QColor(150, 150, 150))
-        self.subtitle_lbl.setAttribute(Qt.WA_TransparentForMouseEvents)
+        self.subtitle_lbl.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         info_layout.addWidget(self.subtitle_lbl)
 
         layout.addLayout(info_layout)
@@ -108,7 +111,7 @@ class FontCard(CardWidget):
 
     def mouseReleaseEvent(self, event):
         """Handle click on card to show preview window"""
-        if event.button() == Qt.LeftButton:
+        if event.button() == Qt.MouseButton.LeftButton:
             self.show_preview_window()
         super().mouseReleaseEvent(event)
 
@@ -184,8 +187,10 @@ class LibraryCard(CardWidget):
 
         name = os.path.basename(self.file_path)
         self.title_lbl = BodyLabel(name, self)
-        self.title_lbl.setFont(QFont("Segoe UI Variable Display", 14, QFont.Bold))
-        self.title_lbl.setAttribute(Qt.WA_TransparentForMouseEvents)
+        font = QFont("Segoe UI Variable Display", 14)
+        font.setBold(True)
+        self.title_lbl.setFont(font)
+        self.title_lbl.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         info_layout.addWidget(self.title_lbl)
 
         self.subtitle_lbl = CaptionLabel(tr("installed"), self)
@@ -203,7 +208,7 @@ class LibraryCard(CardWidget):
 
     def mouseReleaseEvent(self, event):
         """Handle click on card to show preview window"""
-        if event.button() == Qt.LeftButton:
+        if event.button() == Qt.MouseButton.LeftButton:
             self.show_preview_window()
         super().mouseReleaseEvent(event)
 
@@ -230,14 +235,17 @@ class LibraryCard(CardWidget):
             self.icon_widget = ImageLabel(image=pixmap, parent=self)
             self.icon_widget.setFixedSize(200, 48)
             self.icon_widget.scaledToHeight(48)
-            self.icon_widget.setAttribute(Qt.WA_TransparentForMouseEvents)
+            self.icon_widget.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
 
             # Replace old icon in layout
-            item = self.layout().itemAt(0)
-            if item:
-                old_widget = item.widget()
-                self.layout().replaceWidget(old_widget, self.icon_widget)
-                old_widget.deleteLater()
+            layout = self.layout()
+            if layout:
+                item = layout.itemAt(0)
+                if item:
+                    old_widget = item.widget()
+                    if old_widget:
+                        layout.replaceWidget(old_widget, self.icon_widget)
+                        old_widget.deleteLater()
 
     def _request_uninstall(self):
         self.uninstall_requested.emit(self.file_path)

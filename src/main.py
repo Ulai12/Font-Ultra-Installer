@@ -15,6 +15,7 @@ from ui.pages import HomePage, LibraryPage, GoogleFontsPage, SettingsPage, About
 from ui.inspector import GlyphInspectorPage
 from ui.typewriter import TypewriterPage
 from ui.comparer import VersusComparerPage
+from ui.splash import SplashScreen
 # from ui.pairing import FontPairingPage
 
 class MainWindow(FluentWindow):
@@ -60,6 +61,12 @@ class MainWindow(FluentWindow):
 
         # Load custom fonts FIRST
         self.load_custom_fonts()
+
+        # Create and setup splash screen as overlay widget
+        self.splash = SplashScreen(self)
+        self.splash.setGeometry(self.geometry())
+        self.splash.raise_()
+        self.splash.start_animation()
 
         # Set System Accent Color BEFORE creating interfaces
         try:
@@ -204,6 +211,13 @@ class MainWindow(FluentWindow):
         self.addSubInterface(self.settingsInterface, FIF.SETTING, tr("settings"), NavigationItemPosition.BOTTOM)
         self.addSubInterface(self.aboutInterface, FIF.INFO, tr("about"), NavigationItemPosition.BOTTOM)
 
+        # Show main window
+        self.show()
+
+        # Start splash animation after window is shown
+        QTimer.singleShot(100, self.splash.start_animation)
+        QTimer.singleShot(2500, self.splash.finish)
+
     def load_custom_fonts(self):
         """Charger toutes les polices personnalisées depuis assets"""
         self.fonts = {
@@ -304,6 +318,8 @@ class MainWindow(FluentWindow):
         super().resizeEvent(event)
         if hasattr(self, 'bg_label'):
             self.bg_label.setGeometry(0, 0, self.width(), self.height())
+        if hasattr(self, 'splash'):
+            self.splash.setGeometry(0, 0, self.width(), self.height())
 
 if __name__ == '__main__':
     os.environ["QT_ENABLE_HIGHDPI_SCALING"] = "0"
