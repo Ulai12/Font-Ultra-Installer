@@ -2,5 +2,6 @@
   "theme": "System",
   "auto_restart": false,
   "language": "System",
-  "animated_bg": true
+  "animated_bg": true,
+  "transparency": "None"
 }

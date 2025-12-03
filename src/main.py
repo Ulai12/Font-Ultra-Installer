@@ -11,11 +11,10 @@ from qfluentwidgets import (
 
 from config import tr, BASE_DIR, SETTINGS
 from core import is_admin, run_as_admin
-from ui.pages import HomePage, LibraryPage, GoogleFontsPage, SettingsPage, AboutPage
-from ui.inspector import GlyphInspectorPage
-from ui.typewriter import TypewriterPage
-from ui.comparer import VersusComparerPage
-from ui.splash import SplashScreen
+from ui import (
+    HomePage, LibraryPage, GoogleFontsPage, SettingsPage, AboutPage,
+    GlyphInspectorPage, TypewriterPage, VersusComparerPage, SplashScreen
+)
 # from ui.pairing import FontPairingPage
 
 class MainWindow(FluentWindow):
@@ -57,10 +56,14 @@ class MainWindow(FluentWindow):
             self.anim_timer = QTimer(self)
             self.anim_timer.timeout.connect(self.animate_background)
             self.anim_timer.start(3000)  # Animate every 3 seconds
+            self.anim_timer.start(3000)  # Animate every 3 seconds
             self.anim_value = 0
 
         # Load custom fonts FIRST
         self.load_custom_fonts()
+
+        # Apply initial transparency settings
+        self.set_transparency(SETTINGS.get("transparency", "Mica"))
 
         # Create and setup splash screen as overlay widget
         self.splash = SplashScreen(self)
@@ -81,113 +84,7 @@ class MainWindow(FluentWindow):
         except Exception:
             pass
 
-        # Dynamic Glass Stylesheet
-        is_dark = isDarkTheme()
-
-        # Custom Colors
-        dark_base = "#0d0c07"
-        light_base = "#fffce1"
-
-        if is_dark:
-            text_color = light_base
-            nav_bg = "rgba(13, 12, 7, 0.85)"
-            popup_bg = "rgba(13, 12, 7, 0.95)"
-            combo_bg = "rgba(255, 255, 255, 0.05)"
-            combo_border = "rgba(255, 255, 255, 0.1)"
-            item_hover = "rgba(255, 255, 255, 0.1)"
-            nav_border = "rgba(255, 255, 255, 0.05)"
-        else:
-            text_color = dark_base
-            nav_bg = "rgba(255, 252, 225, 0.85)"
-            popup_bg = "rgba(255, 252, 225, 0.95)"
-            combo_bg = "rgba(255, 255, 255, 0.5)"
-            combo_border = "rgba(0, 0, 0, 0.1)"
-            item_hover = "rgba(0, 0, 0, 0.05)"
-            nav_border = "rgba(0, 0, 0, 0.05)"
-
-        glass_style = f"""
-            QScrollBar:vertical {{
-                background: transparent;
-                width: 8px;
-                margin: 0;
-            }}
-            QScrollBar::handle:vertical {{
-                background: rgba(255, 255, 255, 0.2);
-                min-height: 20px;
-                border-radius: 4px;
-            }}
-            QScrollBar::handle:vertical:hover {{
-                background: rgba(255, 255, 255, 0.3);
-            }}
-            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
-                height: 0px;
-            }}
-            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
-                background: transparent;
-            }}
-
-            /* Title Font - Bowlby One SC */
-            TitleLabel {{
-                font-family: "{self.fonts['Title']}";
-                font-size: 36px;
-                font-weight: 900;
-                letter-spacing: 1px;
-            }}
-
-            /* Subtitle Font - Avenir */
-            SubtitleLabel, StrongBodyLabel {{
-                font-family: "{self.fonts['Subtitle']}";
-                font-weight: bold;
-            }}
-
-            /* Body Font - Avenir */
-            BodyLabel, CaptionLabel, QLabel, QPushButton, QLineEdit {{
-                font-family: "{self.fonts['Body']}";
-            }}
-
-            NavigationInterface, NavigationWidget {{
-                background-color: {nav_bg};
-                border: none;
-            }}
-
-            /* ComboBox Glass Effect */
-            QComboBox {{
-                background-color: {combo_bg};
-                border: 1px solid {combo_border};
-                border-radius: 6px;
-                padding: 4px 10px;
-                color: {text_color};
-            }}
-            QComboBox:hover {{
-                background-color: {item_hover};
-                border: 1px solid {combo_border};
-            }}
-            QComboBox::drop-down {{
-                border: none;
-                width: 20px;
-                background: transparent;
-            }}
-            QComboBox QAbstractItemView {{
-                background-color: {popup_bg};
-                border: 1px solid {combo_border};
-                border-radius: 8px;
-                padding: 4px;
-                outline: none;
-                color: {text_color};
-            }}
-            QComboBox QAbstractItemView::item {{
-                padding: 8px;
-                border-radius: 4px;
-                color: {text_color};
-            }}
-            QComboBox QAbstractItemView::item:hover {{
-                background-color: {item_hover};
-            }}
-            QComboBox QAbstractItemView::item:selected {{
-                background-color: {item_hover};
-            }}
-        """
-        self.setStyleSheet(glass_style)
+        self.update_glass_style()
 
         # NOW create interfaces AFTER fonts are loaded and stylesheet is applied
         self.homeInterface = HomePage(self)
@@ -314,12 +211,144 @@ class MainWindow(FluentWindow):
             (screen.height() - size.height()) // 2
         )
 
-    def resizeEvent(self, event):
-        super().resizeEvent(event)
-        if hasattr(self, 'bg_label'):
-            self.bg_label.setGeometry(0, 0, self.width(), self.height())
-        if hasattr(self, 'splash'):
-            self.splash.setGeometry(0, 0, self.width(), self.height())
+    def set_transparency(self, mode):
+        """Set window transparency effect"""
+
+        if mode == "Mica":
+            if sys.getwindowsversion().build >= 22000:
+                self.windowEffect.setMicaEffect(self.winId(), isDarkTheme())
+                self.bg_label.hide()
+                self.setStyleSheet("MainWindow { background: transparent; }")
+            else:
+                print("Mica effect is only available on Windows 11. Falling back to Aero.")
+                self.set_transparency("Aero")
+                return
+        elif mode == "Acrylic":
+            self.windowEffect.setAcrylicEffect(self.winId(), "101010" if isDarkTheme() else "F2F2F2")
+            self.bg_label.hide()
+            self.setStyleSheet("MainWindow { background: transparent; }")
+        elif mode == "Aero":
+            self.windowEffect.setAeroEffect(self.winId())
+            self.bg_label.hide()
+            self.setAttribute(Qt.WA_TranslucentBackground)
+            self.setStyleSheet("MainWindow { background: transparent; }")
+        else:
+            # None - Restore Liquid Glass
+            self.windowEffect.removeBackgroundEffect(self.winId())
+            self.bg_label.show()
+            self.update_background()
+            # Reset stylesheet to default if needed, or just let bg_label cover it
+            self.setStyleSheet("")
+            self.update_glass_style()
+
+    def update_glass_style(self):
+        # Dynamic Glass Stylesheet
+        is_dark = isDarkTheme()
+
+        # Custom Colors
+        dark_base = "#0d0c07"
+        light_base = "#fffce1"
+
+        if is_dark:
+            text_color = light_base
+            nav_bg = "rgba(13, 12, 7, 0.85)"
+            popup_bg = "rgba(13, 12, 7, 0.95)"
+            combo_bg = "rgba(255, 255, 255, 0.05)"
+            combo_border = "rgba(255, 255, 255, 0.1)"
+            item_hover = "rgba(255, 255, 255, 0.1)"
+            nav_border = "rgba(255, 255, 255, 0.05)"
+        else:
+            text_color = dark_base
+            nav_bg = "rgba(255, 252, 225, 0.85)"
+            popup_bg = "rgba(255, 252, 225, 0.95)"
+            combo_bg = "rgba(255, 255, 255, 0.5)"
+            combo_border = "rgba(0, 0, 0, 0.1)"
+            item_hover = "rgba(0, 0, 0, 0.05)"
+            nav_border = "rgba(0, 0, 0, 0.05)"
+
+        glass_style = f"""
+            QScrollBar:vertical {{
+                background: transparent;
+                width: 8px;
+                margin: 0;
+            }}
+            QScrollBar::handle:vertical {{
+                background: rgba(255, 255, 255, 0.2);
+                min-height: 20px;
+                border-radius: 4px;
+            }}
+            QScrollBar::handle:vertical:hover {{
+                background: rgba(255, 255, 255, 0.3);
+            }}
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+                height: 0px;
+            }}
+            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
+                background: transparent;
+            }}
+
+            /* Title Font - Bowlby One SC */
+            TitleLabel {{
+                font-family: "{self.fonts['Title']}";
+                font-size: 36px;
+                font-weight: 900;
+                letter-spacing: 1px;
+            }}
+
+            /* Subtitle Font - Avenir */
+            SubtitleLabel, StrongBodyLabel {{
+                font-family: "{self.fonts['Subtitle']}";
+                font-weight: bold;
+            }}
+
+            /* Body Font - Avenir */
+            BodyLabel, CaptionLabel, QLabel, QPushButton, QLineEdit {{
+                font-family: "{self.fonts['Body']}";
+            }}
+
+            NavigationInterface, NavigationWidget {{
+                background-color: {nav_bg};
+                border: none;
+            }}
+
+            /* ComboBox Glass Effect */
+            QComboBox {{
+                background-color: {combo_bg};
+                border: 1px solid {combo_border};
+                border-radius: 6px;
+                padding: 4px 10px;
+                color: {text_color};
+            }}
+            QComboBox:hover {{
+                background-color: {item_hover};
+                border: 1px solid {combo_border};
+            }}
+            QComboBox::drop-down {{
+                border: none;
+                width: 20px;
+                background: transparent;
+            }}
+            QComboBox QAbstractItemView {{
+                background-color: {popup_bg};
+                border: 1px solid {combo_border};
+                border-radius: 8px;
+                padding: 4px;
+                outline: none;
+                color: {text_color};
+            }}
+            QComboBox QAbstractItemView::item {{
+                padding: 8px;
+                border-radius: 4px;
+                color: {text_color};
+            }}
+            QComboBox QAbstractItemView::item:hover {{
+                background-color: {item_hover};
+            }}
+            QComboBox QAbstractItemView::item:selected {{
+                background-color: {item_hover};
+            }}
+        """
+        self.setStyleSheet(glass_style)
 
 if __name__ == '__main__':
     os.environ["QT_ENABLE_HIGHDPI_SCALING"] = "0"

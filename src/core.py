@@ -4,6 +4,9 @@ import json
 import subprocess
 import ctypes
 import urllib.request
+import shutil
+import tempfile
+import zipfile
 from PySide6.QtCore import QThread, Signal
 from PIL import Image, ImageFont, ImageDraw, ImageQt
 from qfluentwidgets import isDarkTheme
@@ -51,7 +54,7 @@ def is_font_installed(font_name):
             f"{base_name}.ttf",
             f"{base_name}.otf",
         ]
-        
+
         for name in possible_names:
             if os.path.exists(os.path.join(fonts_dir, name)):
                 return True
@@ -77,7 +80,7 @@ def install_font_system(file_path):
             res = subprocess.run([FONT_TOOL, "validate", file_path], capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW)
             if res.returncode == 0: success = True
         except: pass
-    
+
     font_name = os.path.basename(file_path)
     cmd = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", SYSTEM_OPS, "-Command", "register", "-FontPath", file_path, "-FontName", font_name]
     try:
@@ -103,18 +106,28 @@ def create_preview_pixmap(file_path, text="Aa", size=(300, 64)):
         draw = ImageDraw.Draw(image)
         try: font = ImageFont.truetype(file_path, 40)
         except: font = ImageFont.load_default()
-        
+
         bbox = draw.textbbox((0, 0), text, font=font)
         x = (size[0] - (bbox[2] - bbox[0])) / 2
         y = (size[1] - (bbox[3] - bbox[1])) / 2 - bbox[1]
-        
+
         fill_color = (255, 255, 255, 255) if isDarkTheme() else (0, 0, 0, 255)
-        draw.text((x, y), text, font=font, fill=fill_color) 
-        
+        draw.text((x, y), text, font=font, fill=fill_color)
+
         return ImageQt.toqpixmap(image)
     except: return None
 
-# --- Workers ---
+
+
+def extract_archive(file_path):
+    """Extract archive to a temporary directory and return the path"""
+    try:
+        temp_dir = tempfile.mkdtemp(prefix="font_extract_")
+        shutil.unpack_archive(file_path, temp_dir)
+        return temp_dir
+    except Exception as e:
+        print(f"Extraction failed: {e}")
+        return None
 
 class AnalyzeWorker(QThread):
     font_analyzed = Signal(object)  # Changed from dict to object for proper Python dict support
@@ -130,7 +143,7 @@ class AnalyzeWorker(QThread):
                 # Validate file exists
                 if not os.path.exists(file_path):
                     continue
-                
+
                 # Analyze font with error handling
                 try:
                     data = analyze_font(file_path)
@@ -141,31 +154,31 @@ class AnalyzeWorker(QThread):
                         'style': 'Regular',
                         'error': str(e)
                     }
-                
+
                 data['path'] = file_path
-                
+
                 # Validate font
                 try:
                     data['valid'] = validate_font(file_path)
                 except Exception as e:
                     data['valid'] = False
-                
+
                 # Check if installed
                 try:
                     data['installed'] = is_font_installed(data.get('family', os.path.basename(file_path)))
                 except Exception as e:
                     data['installed'] = False
-                
+
                 data['metadata'] = data
-                
+
                 # Generate preview with error handling
                 try:
                     data['preview_pixmap'] = create_preview_pixmap(file_path)
                 except Exception as e:
                     data['preview_pixmap'] = None
-                
+
                 self.font_analyzed.emit(data)
-                
+
             except Exception as e:
                 # Emit error data if complete analysis fails
                 error_data = {
@@ -198,7 +211,7 @@ class InstallWorker(QThread):
         for i, font in enumerate(self.fonts):
             if not font['valid'] or font.get('installed', False):
                 continue
-            
+
             try:
                 self.progress.emit(i, total, os.path.basename(font['path']))
                 success = install_font_system(font['path'])
@@ -207,7 +220,7 @@ class InstallWorker(QThread):
                     count += 1
             except Exception as e:
                 self.item_updated.emit(font['path'], False)
-                
+
         self.finished.emit(count)
 
 class DownloadWorker(QThread):

@@ -15,7 +15,8 @@ SETTINGS = {
     "theme": "System",
     "auto_restart": False,
     "language": "System",
-    "animated_bg": True
+    "animated_bg": True,
+    "transparency": "Mica"
 }
 
 # --- Translations ---

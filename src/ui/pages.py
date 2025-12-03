@@ -12,7 +12,7 @@ from qfluentwidgets import (
 from config import tr, SETTINGS, GOOGLE_FONTS, BASE_DIR, BOWLBY_FONT_PATH
 from core import (
     AnalyzeWorker, InstallWorker, LoadLibraryWorker, DownloadWorker, GoogleFontsWorker,
-    uninstall_font_system, restart_explorer, install_font_system
+    uninstall_font_system, restart_explorer, install_font_system, extract_archive
 )
 from ui.components import FontCard, LibraryCard, GoogleFontCard
 
@@ -116,7 +116,7 @@ class HomePage(QFrame):
         self.process_files(files)
 
     def add_files(self):
-        files, _ = QFileDialog.getOpenFileNames(self, "Select Fonts", "", "Fonts (*.ttf *.otf *.woff *.ttc)")
+        files, _ = QFileDialog.getOpenFileNames(self, "Select Fonts", "", "Fonts & Archives (*.ttf *.otf *.woff *.ttc *.zip)")
         if files:
             self.process_files(files)
 
@@ -131,7 +131,21 @@ class HomePage(QFrame):
             self.process_files(files)
 
     def process_files(self, files):
-        new_files = [f for f in files if f not in [x['path'] for x in self.fonts]]
+        processed_files = []
+
+        for file_path in files:
+            if file_path.lower().endswith('.zip'):
+                # Extract archive
+                extract_dir = extract_archive(file_path)
+                if extract_dir:
+                    for root, _, filenames in os.walk(extract_dir):
+                        for filename in filenames:
+                            if filename.lower().endswith(('.ttf', '.otf', '.woff', '.ttc')):
+                                processed_files.append(os.path.join(root, filename))
+            elif file_path.lower().endswith(('.ttf', '.otf', '.woff', '.ttc')):
+                processed_files.append(file_path)
+
+        new_files = [f for f in processed_files if f not in [x['path'] for x in self.fonts]]
         if not new_files: return
 
         self.worker = AnalyzeWorker(new_files)
@@ -493,6 +507,24 @@ class SettingsPage(QFrame):
 
         self.vBoxLayout.addWidget(self.animBgCard)
 
+        # Transparency
+        self.transparencyCard = CardWidget(self)
+        transparencyLayout = QHBoxLayout(self.transparencyCard)
+        transparencyLayout.setContentsMargins(16, 16, 16, 16)
+
+        transparencyInfo = QVBoxLayout()
+        transparencyInfo.addWidget(SubtitleLabel(tr("window_effect"), self))
+        transparencyInfo.addWidget(CaptionLabel(tr("window_effect_desc"), self))
+        transparencyLayout.addLayout(transparencyInfo)
+
+        self.transparencyCombo = ComboBox(self)
+        self.transparencyCombo.addItems(["None", "Mica", "Acrylic", "Aero"])
+        self.transparencyCombo.setCurrentText(SETTINGS.get("transparency", "Mica"))
+        self.transparencyCombo.currentTextChanged.connect(self.change_transparency)
+        transparencyLayout.addWidget(self.transparencyCombo)
+
+        self.vBoxLayout.addWidget(self.transparencyCard)
+
     def change_theme(self, text):
         from config import save_settings
         SETTINGS["theme"] = text
@@ -535,6 +567,14 @@ class SettingsPage(QFrame):
         save_settings()
         if hasattr(self.window(), 'toggle_animation'):
             self.window().toggle_animation(checked)
+
+    def change_transparency(self, text):
+        """Change window transparency effect"""
+        from config import save_settings
+        SETTINGS["transparency"] = text
+        save_settings()
+        if hasattr(self.window(), 'set_transparency'):
+            self.window().set_transparency(text)
 
 class AboutPage(QFrame):
     def __init__(self, parent=None):
