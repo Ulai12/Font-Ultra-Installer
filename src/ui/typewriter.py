@@ -8,7 +8,7 @@ from qfluentwidgets import (
     TitleLabel, ComboBox, ToolButton, FluentIcon as FIF,
     Slider, SwitchButton, isDarkTheme
 )
-from config import tr, BASE_DIR, BOWLBY_FONT_PATH
+from config import tr, BOWLBY_FONT_PATH
 
 def _apply_bowlby_font(label):
     """Apply Bowlby One SC font to a title label via stylesheet"""

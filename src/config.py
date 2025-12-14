@@ -3,12 +3,66 @@ import sys
 import json
 import locale
 
+# --- Gestion des ressources PyInstaller ---
+# Quand l'application est compilée avec PyInstaller, les ressources sont
+# extraites dans un répertoire temporaire stocké dans sys._MEIPASS.
+# Cette fonction permet de récupérer le bon chemin selon le contexte d'exécution.
+
+def get_resource_base_dir():
+    """
+    Récupère le répertoire de base des ressources.
+
+    En mode développement : retourne le répertoire parent du dossier src/
+    En mode PyInstaller (.exe) : retourne sys._MEIPASS où les ressources sont extraites
+
+    Returns:
+        str: Chemin absolu vers le répertoire contenant les ressources (assets, locales, bin)
+    """
+    if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+        # Mode PyInstaller : les ressources sont dans _MEIPASS
+        return sys._MEIPASS
+    else:
+        # Mode développement : chemin relatif classique
+        return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+def get_resource(*path_parts):
+    """
+    Récupère le chemin absolu vers une ressource.
+
+    Cette fonction gère automatiquement la différence entre :
+    - Mode développement : ressources dans le répertoire du projet
+    - Mode PyInstaller : ressources extraites dans sys._MEIPASS
+
+    Args:
+        *path_parts: Parties du chemin relatif (ex: 'assets', 'logo.png')
+
+    Returns:
+        str: Chemin absolu vers la ressource
+
+    Exemple:
+        get_resource('assets', 'logo.png')  -> 'C:/temp/_MEI123/assets/logo.png' (en .exe)
+        get_resource('locales', 'fr.json')  -> 'D:/ULTRA FONT INSTALLER/locales/fr.json' (dev)
+    """
+    base = get_resource_base_dir()
+    return os.path.join(base, *path_parts)
+
 # --- Constants ---
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-BIN_DIR = os.path.join(BASE_DIR, 'bin')
-FONT_TOOL = os.path.join(BIN_DIR, 'font_tool.exe')
-SYSTEM_OPS = os.path.join(BIN_DIR, 'SystemOps.ps1')
-BOWLBY_FONT_PATH = os.path.join(BASE_DIR, 'assets', 'Fonts', 'Bowlby_One_SC', 'BowlbyOneSC-Regular.ttf')
+# BASE_DIR pour les ressources (assets, locales, bin) - utilise _MEIPASS si frozen
+BASE_DIR = get_resource_base_dir()
+
+# Répertoire de l'application (pour les fichiers de configuration comme settings.json)
+# Ce répertoire reste le répertoire d'exécution, pas _MEIPASS
+if getattr(sys, 'frozen', False):
+    # En mode .exe, utiliser le répertoire où se trouve l'exécutable
+    APP_DIR = os.path.dirname(sys.executable)
+else:
+    # En mode développement, utiliser le répertoire du projet
+    APP_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+BIN_DIR = get_resource('bin')
+FONT_TOOL = get_resource('bin', 'font_tool.exe')
+SYSTEM_OPS = get_resource('bin', 'SystemOps.ps1')
+BOWLBY_FONT_PATH = get_resource('assets', 'Fonts', 'Bowlby_One_SC', 'BowlbyOneSC-Regular.ttf')
 
 # --- Settings ---
 SETTINGS = {
@@ -20,7 +74,8 @@ SETTINGS = {
 }
 
 # --- Translations ---
-LOCALES_DIR = os.path.join(BASE_DIR, "locales")
+# Les traductions sont des ressources empaquetées avec l'application
+LOCALES_DIR = get_resource("locales")
 TRANSLATIONS = {}
 
 def load_translations():
@@ -63,8 +118,9 @@ def tr(key):
 
     return TRANSLATIONS.get(lang, TRANSLATIONS["en"]).get(key, key)
 
-# Settings file path
-SETTINGS_FILE = os.path.join(BASE_DIR, "settings.json")
+# Chemin du fichier de paramètres - utilise APP_DIR pour être à côté de l'exécutable
+# (et non dans _MEIPASS qui est temporaire et supprimé après exécution)
+SETTINGS_FILE = os.path.join(APP_DIR, "settings.json")
 
 def save_settings():
     """Save settings to JSON file"""

@@ -1,209 +1,208 @@
 import os
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont, QFontDatabase, QColor
-from PySide6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QWidget
+from PySide6.QtGui import QFont, QFontDatabase
+from PySide6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QWidget, QLabel
 from qfluentwidgets import (
     TitleLabel, SubtitleLabel, BodyLabel, CardWidget, ScrollArea,
-    ComboBox, LineEdit, FluentIcon as FIF, ImageLabel
+    ComboBox, LineEdit, isDarkTheme
 )
 
-from config import tr, BASE_DIR, BOWLBY_FONT_PATH
+from config import tr, BOWLBY_FONT_PATH
 from core import create_preview_pixmap
 
+
 def _apply_bowlby_font(label):
-    """Apply Bowlby One SC font to a title label via stylesheet"""
+    """Appliquer la police Bowlby One SC à un label de titre"""
     if os.path.exists(BOWLBY_FONT_PATH):
         QFontDatabase.addApplicationFont(BOWLBY_FONT_PATH)
         label.setStyleSheet("font-family: 'Bowlby One SC'; font-size: 32px;")
 
+
 class VersusComparerPage(QFrame):
+    """Page de comparaison de polices côte à côte"""
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("VersusComparerPage")
         self.setStyleSheet("VersusComparerPage { background: transparent; }")
+
         self.vBoxLayout = QVBoxLayout(self)
         self.vBoxLayout.setContentsMargins(36, 36, 36, 36)
-        self.vBoxLayout.setSpacing(20)
+        self.vBoxLayout.setSpacing(24)
 
-        # Header
+        # En-tête
         self.titleLabel = TitleLabel(tr("versus_comparer").upper(), self)
         _apply_bowlby_font(self.titleLabel)
         self.vBoxLayout.addWidget(self.titleLabel, 0, Qt.AlignCenter)
 
         self.descLabel = BodyLabel(tr("versus_desc"), self)
+        self.descLabel.setAlignment(Qt.AlignCenter)
         self.vBoxLayout.addWidget(self.descLabel, 0, Qt.AlignCenter)
 
-        # Font Selectors
-        selectorLayout = QHBoxLayout()
+        # Zone de texte de prévisualisation
+        previewCard = CardWidget(self)
+        previewCard.setStyleSheet(self._card_style())
+        previewLayout = QHBoxLayout(previewCard)
+        previewLayout.setContentsMargins(16, 12, 16, 12)
 
-        # Font 1
-        font1Layout = QVBoxLayout()
-        font1Layout.addWidget(SubtitleLabel(tr("font_1"), self))
-        self.font1Combo = ComboBox(self)
-        self.font1Combo.currentTextChanged.connect(self.update_comparison)
-        font1Layout.addWidget(self.font1Combo)
-        selectorLayout.addLayout(font1Layout)
+        textLabel = SubtitleLabel(tr("text_label"), self)
+        previewLayout.addWidget(textLabel)
 
-        # VS Label
-        vsLabel = TitleLabel("VS", self)
-        vsLabel.setAlignment(Qt.AlignCenter)
-        selectorLayout.addWidget(vsLabel)
-
-        # Font 2
-        font2Layout = QVBoxLayout()
-        font2Layout.addWidget(SubtitleLabel(tr("font_2"), self))
-        self.font2Combo = ComboBox(self)
-        self.font2Combo.currentTextChanged.connect(self.update_comparison)
-        font2Layout.addWidget(self.font2Combo)
-        selectorLayout.addLayout(font2Layout)
-
-        self.vBoxLayout.addLayout(selectorLayout)
-
-        # Preview Text Input
-        previewLayout = QHBoxLayout()
-        previewLayout.addWidget(SubtitleLabel(tr("text_label"), self))
         self.previewText = LineEdit(self)
         self.previewText.setText(tr("pangram"))
+        self.previewText.setPlaceholderText("Entrez le texte à afficher...")
         self.previewText.textChanged.connect(self.update_comparison)
-        previewLayout.addWidget(self.previewText)
-        self.vBoxLayout.addLayout(previewLayout)
+        previewLayout.addWidget(self.previewText, 1)
 
-        # Comparison Area
-        self.scrollArea = ScrollArea(self)
-        self.scrollArea.setWidgetResizable(True)
-        self.scrollArea.setStyleSheet("background: transparent; border: none;")
+        self.vBoxLayout.addWidget(previewCard)
 
-        self.scrollWidget = QWidget()
-        self.scrollWidget.setStyleSheet("background: transparent;")
-        self.scrollLayout = QVBoxLayout(self.scrollWidget)
-        self.scrollLayout.setSpacing(20)
+        # Zone de comparaison principale
+        comparisonLayout = QHBoxLayout()
+        comparisonLayout.setSpacing(20)
 
-        # Font 1 Card
-        self.font1Card = CardWidget(self)
-        self.font1Card.setStyleSheet("""
-            CardWidget {
-                background-color: rgba(255, 255, 255, 0.1);
-                border: 1px solid rgba(255, 255, 255, 0.2);
-                border-radius: 12px;
-            }
-        """)
-        font1CardLayout = QVBoxLayout(self.font1Card)
-        font1CardLayout.setContentsMargins(20, 20, 20, 20)
-        font1CardLayout.setSpacing(12)
+        # Carte Police 1
+        self.font1Card = self._create_font_card("1")
+        comparisonLayout.addWidget(self.font1Card, 1)
 
-        self.font1NameLabel = SubtitleLabel("Font 1", self)
-        font1CardLayout.addWidget(self.font1NameLabel)
+        # Séparateur VS
+        vsContainer = QWidget()
+        vsLayout = QVBoxLayout(vsContainer)
+        vsLayout.setAlignment(Qt.AlignCenter)
+        vsLabel = TitleLabel("VS", self)
+        vsLabel.setStyleSheet("font-size: 28px; font-weight: bold; color: rgba(255, 255, 255, 0.5);")
+        vsLayout.addWidget(vsLabel)
+        comparisonLayout.addWidget(vsContainer)
 
-        self.font1Preview = ImageLabel()
-        self.font1Preview.setMinimumHeight(80)
-        font1CardLayout.addWidget(self.font1Preview)
+        # Carte Police 2
+        self.font2Card = self._create_font_card("2")
+        comparisonLayout.addWidget(self.font2Card, 1)
 
-        self.scrollLayout.addWidget(self.font1Card)
+        self.vBoxLayout.addLayout(comparisonLayout, 1)
 
-        # Font 2 Card
-        self.font2Card = CardWidget(self)
-        self.font2Card.setStyleSheet("""
-            CardWidget {
-                background-color: rgba(255, 255, 255, 0.1);
-                border: 1px solid rgba(255, 255, 255, 0.2);
-                border-radius: 12px;
-            }
-        """)
-        font2CardLayout = QVBoxLayout(self.font2Card)
-        font2CardLayout.setContentsMargins(20, 20, 20, 20)
-        font2CardLayout.setSpacing(12)
-
-        self.font2NameLabel = SubtitleLabel("Font 2", self)
-        font2CardLayout.addWidget(self.font2NameLabel)
-
-        self.font2Preview = ImageLabel()
-        self.font2Preview.setMinimumHeight(80)
-        font2CardLayout.addWidget(self.font2Preview)
-
-        self.scrollLayout.addWidget(self.font2Card)
-
-        self.scrollArea.setWidget(self.scrollWidget)
-        self.vBoxLayout.addWidget(self.scrollArea)
-
-        # Cache for font file paths
+        # Cache pour les chemins des polices
         self.font_cache = {}
 
-        # Load fonts
+        # Charger les polices
         self.load_fonts()
 
+    def _card_style(self):
+        """Style commun pour les cartes"""
+        return """
+            CardWidget {
+                background-color: rgba(255, 255, 255, 0.08);
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                border-radius: 16px;
+            }
+        """
+
+    def _create_font_card(self, num):
+        """Créer une carte de prévisualisation de police"""
+        card = CardWidget(self)
+        card.setStyleSheet(self._card_style())
+        card.setMinimumHeight(200)
+
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(16)
+
+        # Sélecteur de police
+        combo = ComboBox(self)
+        combo.setMinimumWidth(180)
+        combo.currentTextChanged.connect(self.update_comparison)
+        layout.addWidget(combo, 0, Qt.AlignCenter)
+
+        # Nom de la police
+        nameLabel = SubtitleLabel(f"Police {num}", self)
+        nameLabel.setAlignment(Qt.AlignCenter)
+        layout.addWidget(nameLabel, 0, Qt.AlignCenter)
+
+        # Zone de prévisualisation
+        previewLabel = QLabel(self)
+        previewLabel.setMinimumHeight(100)
+        previewLabel.setAlignment(Qt.AlignCenter)
+        previewLabel.setStyleSheet("background: transparent;")
+        layout.addWidget(previewLabel, 1)
+
+        # Stocker les références
+        if num == "1":
+            self.font1Combo = combo
+            self.font1NameLabel = nameLabel
+            self.font1Preview = previewLabel
+        else:
+            self.font2Combo = combo
+            self.font2NameLabel = nameLabel
+            self.font2Preview = previewLabel
+
+        return card
+
     def load_fonts(self):
-        """Load installed fonts into combo boxes"""
+        """Charger les polices installées dans les combo boxes"""
         font_names = sorted(QFontDatabase.families())
 
         self.font1Combo.addItems(font_names)
         self.font2Combo.addItems(font_names)
 
+        # Sélectionner des polices différentes par défaut
         if len(font_names) > 1:
+            self.font1Combo.setCurrentIndex(0)
             self.font2Combo.setCurrentIndex(1)
 
         self.update_comparison()
 
     def _get_font_file(self, font_name):
-        """Get font file path, using cache for performance"""
+        """Obtenir le chemin du fichier de police avec cache"""
         if font_name in self.font_cache:
             return self.font_cache[font_name]
 
-        fonts_dir = os.path.join(os.environ['WINDIR'], 'Fonts')
+        fonts_dir = os.path.join(os.environ.get('WINDIR', 'C:\\Windows'), 'Fonts')
         try:
-            # Simple heuristic: look for files starting with font name
             for filename in os.listdir(fonts_dir):
                 if filename.lower().endswith(('.ttf', '.otf')):
                     full_path = os.path.join(fonts_dir, filename)
-                    # Check if filename matches the font name
-                    base_name = os.path.splitext(filename)[0]
-                    if font_name.lower() in base_name.lower() or base_name.lower() in font_name.lower():
+                    base_name = os.path.splitext(filename)[0].lower()
+                    font_lower = font_name.lower().replace(' ', '')
+
+                    if font_lower in base_name.replace(' ', '') or base_name.replace(' ', '') in font_lower:
                         self.font_cache[font_name] = full_path
                         return full_path
-        except:
-            pass
+        except Exception as e:
+            print(f"Erreur lors de la recherche de police: {e}")
 
         return None
 
     def update_comparison(self):
-        """Update the comparison preview"""
+        """Mettre à jour les prévisualisations"""
         font1_name = self.font1Combo.currentText()
         font2_name = self.font2Combo.currentText()
-        text = self.previewText.text()
+        text = self.previewText.text() or tr("pangram")
 
-        if not font1_name or not font2_name:
-            return
+        # Mettre à jour Police 1
+        if font1_name:
+            self.font1NameLabel.setText(font1_name)
+            self._update_preview(self.font1Preview, font1_name, text)
 
-        if not text:
-            text = tr("pangram")
+        # Mettre à jour Police 2
+        if font2_name:
+            self.font2NameLabel.setText(font2_name)
+            self._update_preview(self.font2Preview, font2_name, text)
 
-        # Update Font 1
-        self.font1NameLabel.setText(font1_name)
-        font1_file = self._get_font_file(font1_name)
-        if font1_file and os.path.exists(font1_file):
-            pixmap = create_preview_pixmap(font1_file, text, size=(450, 100))
+    def _update_preview(self, preview_label, font_name, text):
+        """Mettre à jour une prévisualisation individuelle"""
+        font_file = self._get_font_file(font_name)
+
+        if font_file and os.path.exists(font_file):
+            # Utiliser create_preview_pixmap avec le fichier de police
+            pixmap = create_preview_pixmap(font_file, text, size=(350, 100))
             if pixmap:
-                self.font1Preview = ImageLabel(image=pixmap, parent=self.font1Card)
-                self.font1Preview.setMinimumHeight(80)
-                # Replace in layout
-                layout = self.font1Card.layout()
-                if layout.count() > 1:
-                    old = layout.itemAt(1).widget()
-                    if old:
-                        layout.replaceWidget(old, self.font1Preview)
-                        old.deleteLater()
+                preview_label.setPixmap(pixmap)
+                preview_label.setScaledContents(False)
+                return
 
-        # Update Font 2
-        self.font2NameLabel.setText(font2_name)
-        font2_file = self._get_font_file(font2_name)
-        if font2_file and os.path.exists(font2_file):
-            pixmap = create_preview_pixmap(font2_file, text, size=(450, 100))
-            if pixmap:
-                self.font2Preview = ImageLabel(image=pixmap, parent=self.font2Card)
-                self.font2Preview.setMinimumHeight(80)
-                # Replace in layout
-                layout = self.font2Card.layout()
-                if layout.count() > 1:
-                    old = layout.itemAt(1).widget()
-                    if old:
-                        layout.replaceWidget(old, self.font2Preview)
-                        old.deleteLater()
+        # Fallback: utiliser QFont directement
+        preview_label.setText(text)
+        font = QFont(font_name, 32)
+        preview_label.setFont(font)
+
+        # Couleur adaptée au thème
+        text_color = "#ffffff" if isDarkTheme() else "#000000"
+        preview_label.setStyleSheet(f"color: {text_color}; background: transparent;")

@@ -4,7 +4,7 @@ from PySide6.QtGui import QPixmap, QFont
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QProgressBar
 from qfluentwidgets import SubtitleLabel, CaptionLabel
 
-from config import BASE_DIR
+from config import get_resource
 
 class SplashScreen(QWidget):
     """Splash screen overlay widget for main window"""
@@ -33,9 +33,9 @@ class SplashScreen(QWidget):
         # Add spacing at top
         layout.addStretch(1)
 
-        # Logo
+        # Logo - utilise get_resource pour trouver le fichier dans _MEIPASS ou le répertoire de développement
         self.logo_label = QLabel()
-        logo_path = os.path.join(BASE_DIR, "FontUltraInstaller.png")
+        logo_path = get_resource("assets", "logo.png")
         if os.path.exists(logo_path):
             pixmap = QPixmap(logo_path)
             scaled_pixmap = pixmap.scaledToWidth(200, Qt.TransformationMode.SmoothTransformation)

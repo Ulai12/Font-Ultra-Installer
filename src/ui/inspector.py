@@ -7,7 +7,7 @@ from qfluentwidgets import (
     TitleLabel, SubtitleLabel, ComboBox, CardWidget, FluentIcon as FIF,
     ToolButton, SearchLineEdit, ScrollArea
 )
-from config import tr, BASE_DIR, BOWLBY_FONT_PATH
+from config import tr, BOWLBY_FONT_PATH
 
 def _apply_bowlby_font(label):
     """Apply Bowlby One SC font to a title label via stylesheet"""
@@ -80,7 +80,18 @@ class GlyphInspectorPage(QFrame):
             return
 
         try:
+            # Vérifier que la police existe dans la base de données
+            db = QFontDatabase()
+            if font_family not in db.families():
+                print(f"Police non trouvée: {font_family}")
+                return
+
             font = QFont(font_family, 24)
+            font.setStyleHint(QFont.AnyStyle)
+
+            # Couleur du texte adaptée au thème
+            from qfluentwidgets import isDarkTheme
+            text_color = "#ffffff" if isDarkTheme() else "#000000"
 
             # Display a range of common glyphs
             row = 0
@@ -114,6 +125,7 @@ class GlyphInspectorPage(QFrame):
                     lbl = QLabel(char, card)
                     lbl.setFont(font)
                     lbl.setAlignment(Qt.AlignCenter)
+                    lbl.setStyleSheet(f"color: {text_color}; background: transparent;")
                     layout.addWidget(lbl)
 
                     self.gridLayout.addWidget(card, row, col)
@@ -124,3 +136,4 @@ class GlyphInspectorPage(QFrame):
                         row += 1
         except Exception as e:
             print(f"Erreur lors du chargement des glyphes: {e}")
+

@@ -9,11 +9,11 @@ from qfluentwidgets import (
     Theme, setTheme, setThemeColor, isDarkTheme
 )
 
-from config import tr, BASE_DIR, SETTINGS
+from config import tr, BASE_DIR, SETTINGS, get_resource
 from core import is_admin, run_as_admin
 from ui import (
     HomePage, LibraryPage, GoogleFontsPage, SettingsPage, AboutPage,
-    GlyphInspectorPage, TypewriterPage, VersusComparerPage, SplashScreen
+    TypewriterPage, VersusComparerPage
 )
 # from ui.pairing import FontPairingPage
 
@@ -26,15 +26,13 @@ class MainWindow(FluentWindow):
             sys.exit()
 
         self.setWindowTitle(tr("window_title"))
-        self.resize(1000, 600)
+        self.resize(1000, 500)
+        self.setMinimumSize(800, 400)  # Taille minimale pour éviter les problèmes de redimensionnement
 
-        # Set window icon
-        logo_path = os.path.join(BASE_DIR, "assets", "logo.png")
+        # Icône de la fenêtre
+        logo_path = get_resource("assets", "logo.png")
         if os.path.exists(logo_path):
             self.setWindowIcon(QIcon(logo_path))
-
-        # Center window on screen
-        self.moveToCenter()
 
         # --- Liquid Glass Background ---
         self.bg_label = QLabel(self)
@@ -65,11 +63,7 @@ class MainWindow(FluentWindow):
         # Apply initial transparency settings
         self.set_transparency(SETTINGS.get("transparency", "Mica"))
 
-        # Create and setup splash screen as overlay widget
-        self.splash = SplashScreen(self)
-        self.splash.setGeometry(self.geometry())
-        self.splash.raise_()
-        self.splash.start_animation()
+
 
         # Set System Accent Color BEFORE creating interfaces
         try:
@@ -86,35 +80,27 @@ class MainWindow(FluentWindow):
 
         self.update_glass_style()
 
-        # NOW create interfaces AFTER fonts are loaded and stylesheet is applied
+        # Créer les interfaces APRÈS le chargement des polices et l'application de la feuille de style
         self.homeInterface = HomePage(self)
         self.libraryInterface = LibraryPage(self)
         self.googleFontsInterface = GoogleFontsPage(self)
-        self.inspectorInterface = GlyphInspectorPage(self)
         self.typewriterInterface = TypewriterPage(self)
         self.comparerInterface = VersusComparerPage(self)
-        # self.pairingInterface = FontPairingPage(self)
         self.settingsInterface = SettingsPage(self)
         self.aboutInterface = AboutPage(self)
 
         self.addSubInterface(self.homeInterface, FIF.HOME, tr("home"))
         self.addSubInterface(self.libraryInterface, FIF.LIBRARY, tr("library"))
         self.addSubInterface(self.googleFontsInterface, FIF.SHOPPING_CART, tr("store"))
-        self.addSubInterface(self.inspectorInterface, FIF.SEARCH, tr("inspector"))
         self.addSubInterface(self.typewriterInterface, FIF.EDIT, tr("type writer"))
         self.addSubInterface(self.comparerInterface, FIF.VIEW, tr("versus"))
-        # self.addSubInterface(self.pairingInterface, FIF.PALETTE, tr("pairing"))
 
         self.addSubInterface(self.settingsInterface, FIF.SETTING, tr("settings"), NavigationItemPosition.BOTTOM)
         self.addSubInterface(self.aboutInterface, FIF.INFO, tr("about"), NavigationItemPosition.BOTTOM)
 
-        # Show main window
+        # Afficher la fenêtre et centrer à l'écran
         self.show()
-
-        # Start splash animation after window is shown
-        QTimer.singleShot(100, self.splash.start_animation)
-        QTimer.singleShot(2500, self.splash.finish)
-
+        self.moveToCenter()  # Centrer APRÈS show() pour avoir les bonnes dimensions
     def load_custom_fonts(self):
         """Charger toutes les polices personnalisées depuis assets"""
         self.fonts = {
@@ -124,7 +110,7 @@ class MainWindow(FluentWindow):
             "Mono": "Consolas"
         }
 
-        assets_dir = os.path.join(BASE_DIR, "assets")
+        assets_dir = get_resource("assets")
 
         def find_font_path(filename):
             for root, dirs, files in os.walk(assets_dir):
@@ -156,7 +142,7 @@ class MainWindow(FluentWindow):
         """Mettre à jour l'image de fond en fonction du thème"""
         is_dark = isDarkTheme()
         bg_file = "liquid_bg_dark.png" if is_dark else "liquid_bg_light.png"
-        bg_path = os.path.join(BASE_DIR, "assets", bg_file)
+        bg_path = get_resource("assets", bg_file)
 
         if os.path.exists(bg_path):
             pixmap = QPixmap(bg_path)
@@ -210,6 +196,12 @@ class MainWindow(FluentWindow):
             (screen.width() - size.width()) // 2,
             (screen.height() - size.height()) // 2
         )
+
+    def resizeEvent(self, event):
+        """Mettre à jour la position du fond lors du redimensionnement de la fenêtre"""
+        super().resizeEvent(event)
+        # Mettre à jour la géométrie du bg_label pour couvrir toute la fenêtre
+        self.bg_label.setGeometry(0, 0, self.width(), self.height())
 
     def set_transparency(self, mode):
         """Set window transparency effect"""

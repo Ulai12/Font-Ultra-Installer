@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Ultra Font Installer - WiX Toolset Configuration
+    Auteur: JULAI
+    Version: 2.0.0
+
+    Ce fichier définit la structure du package MSI pour l'installation Windows.
+    Prérequis: WiX Toolset v4+ (https://wixtoolset.org/)
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+
+    <!-- Définition du package MSI -->
+    <Package
+        Name="Ultra Font Installer"
+        Manufacturer="JULAI"
+        Version="2.0.0.0"
+        UpgradeCode="8A5C7E3F-4B2D-4A1E-9F8C-6D3E2B1A0F9E"
+        Scope="perMachine"
+        Language="1036"
+        Codepage="1252">
+
+        <!-- Informations de résumé -->
+        <SummaryInformation
+            Description="Ultra Font Installer - Installateur de polices moderne pour Windows"
+            Keywords="Polices, Fonts, Installer, Typography"
+            Manufacturer="JULAI" />
+
+        <!-- Icône du programme dans Ajout/Suppression de programmes -->
+        <Icon Id="AppIcon" SourceFile="FontUltraInstaller.ico" />
+        <Property Id="ARPPRODUCTICON" Value="AppIcon" />
+        <Property Id="ARPURLINFOABOUT" Value="https://github.com/Ulai12/Font-Ultra-Installer" />
+        <Property Id="ARPHELPLINK" Value="https://github.com/Ulai12/Font-Ultra-Installer/issues" />
+
+        <!-- Mise à niveau automatique des versions précédentes -->
+        <MajorUpgrade
+            DowngradeErrorMessage="Une version plus récente de [ProductName] est déjà installée."
+            AllowSameVersionUpgrades="yes" />
+
+        <!-- Interface utilisateur de base -->
+        <WixVariable Id="WixUILicenseRtf" Value="packaging\license.rtf" />
+        <UIRef Id="WixUI_InstallDir" />
+        <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
+
+        <!-- Fichiers média (compression) -->
+        <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+        <!-- Structure des répertoires -->
+        <StandardDirectory Id="ProgramFiles64Folder">
+            <Directory Id="INSTALLFOLDER" Name="Ultra Font Installer">
+                <!-- Tous les fichiers de l'application seront ici -->
+            </Directory>
+        </StandardDirectory>
+
+        <!-- Répertoire du menu Démarrer -->
+        <StandardDirectory Id="ProgramMenuFolder">
+            <Directory Id="ApplicationProgramsFolder" Name="Ultra Font Installer" />
+        </StandardDirectory>
+
+        <!-- Répertoire du Bureau -->
+        <StandardDirectory Id="DesktopFolder" />
+
+        <!-- Composant principal : l'exécutable -->
+        <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
+            <Component Id="MainExecutable" Guid="8A5C7E3F-4B2D-4A1E-9F8C-6D3E2B1A0F00">
+                <File Id="UltraFontInstallerExe"
+                      Source="dist\Ultra Font Installer.exe"
+                      KeyPath="yes">
+                    <!-- Association de fichiers .ttf (optionnel) -->
+                    <!--
+                    <ProgId Id="UltraFontInstaller.ttf" Description="Police TrueType">
+                        <Extension Id="ttf" ContentType="application/x-font-ttf">
+                            <Verb Id="open" Command="Ouvrir avec Ultra Font Installer" TargetFile="UltraFontInstallerExe" Argument='"%1"' />
+                        </Extension>
+                    </ProgId>
+                    -->
+                </File>
+            </Component>
+        </ComponentGroup>
+
+        <!-- Raccourcis -->
+        <ComponentGroup Id="ShortcutComponents">
+            <!-- Raccourci dans le menu Démarrer -->
+            <Component Id="StartMenuShortcut" Directory="ApplicationProgramsFolder" Guid="8A5C7E3F-4B2D-4A1E-9F8C-6D3E2B1A0F01">
+                <Shortcut Id="StartMenuShortcut"
+                          Name="Ultra Font Installer"
+                          Description="Installateur de polices moderne pour Windows"
+                          Target="[INSTALLFOLDER]Ultra Font Installer.exe"
+                          WorkingDirectory="INSTALLFOLDER"
+                          Icon="AppIcon" />
+                <RemoveFolder Id="CleanUpStartMenu" Directory="ApplicationProgramsFolder" On="uninstall" />
+                <RegistryValue Root="HKCU" Key="Software\JULAI\Ultra Font Installer" Name="StartMenuInstalled" Type="integer" Value="1" KeyPath="yes" />
+            </Component>
+
+            <!-- Raccourci sur le Bureau -->
+            <Component Id="DesktopShortcut" Directory="DesktopFolder" Guid="8A5C7E3F-4B2D-4A1E-9F8C-6D3E2B1A0F02">
+                <Shortcut Id="DesktopShortcut"
+                          Name="Ultra Font Installer"
+                          Description="Installateur de polices moderne pour Windows"
+                          Target="[INSTALLFOLDER]Ultra Font Installer.exe"
+                          WorkingDirectory="INSTALLFOLDER"
+                          Icon="AppIcon" />
+                <RegistryValue Root="HKCU" Key="Software\JULAI\Ultra Font Installer" Name="DesktopInstalled" Type="integer" Value="1" KeyPath="yes" />
+            </Component>
+        </ComponentGroup>
+
+        <!-- Feature principale (ce qui est installé) -->
+        <Feature Id="Complete" Title="Ultra Font Installer" Level="1">
+            <ComponentGroupRef Id="ProductComponents" />
+            <ComponentGroupRef Id="ShortcutComponents" />
+        </Feature>
+
+    </Package>
+</Wix>

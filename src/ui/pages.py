@@ -9,7 +9,7 @@ from qfluentwidgets import (
     MessageBox, InfoBar, InfoBarPosition, Theme, setTheme, FluentIcon as FIF
 )
 
-from config import tr, SETTINGS, GOOGLE_FONTS, BASE_DIR, BOWLBY_FONT_PATH
+from config import tr, SETTINGS, GOOGLE_FONTS, BOWLBY_FONT_PATH, get_resource
 from core import (
     AnalyzeWorker, InstallWorker, LoadLibraryWorker, DownloadWorker, GoogleFontsWorker,
     uninstall_font_system, restart_explorer, install_font_system, extract_archive
@@ -417,113 +417,147 @@ class GoogleFontsPage(QFrame):
                 break
 
 class SettingsPage(QFrame):
+    """Page des paramètres de l'application"""
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("SettingsPage")
-        self.setStyleSheet("""
-            SettingsPage { background: transparent; }
-            CardWidget {
-                background-color: rgba(255, 255, 255, 0.1);
-                border: 1px solid rgba(255, 255, 255, 0.2);
-                border-radius: 12px;
-            }
-        """)
-        self.vBoxLayout = QVBoxLayout(self)
-        self.vBoxLayout.setContentsMargins(36, 36, 36, 36)
-        self.vBoxLayout.setSpacing(20)
-        self.vBoxLayout.setAlignment(Qt.AlignTop)
+        self.setStyleSheet("SettingsPage { background: transparent; }")
 
+        # Layout principal
+        mainLayout = QVBoxLayout(self)
+        mainLayout.setContentsMargins(36, 36, 36, 36)
+        mainLayout.setSpacing(24)
+
+        # Titre
         self.titleLabel = TitleLabel(tr("settings").upper(), self)
         _apply_bowlby_font(self.titleLabel)
-        self.vBoxLayout.addWidget(self.titleLabel, 0, Qt.AlignCenter)
+        mainLayout.addWidget(self.titleLabel, 0, Qt.AlignCenter)
 
-        # Theme
-        self.themeCard = CardWidget(self)
-        themeLayout = QHBoxLayout(self.themeCard)
-        themeLayout.setContentsMargins(16, 16, 16, 16)
+        # Container pour centrer les cartes
+        containerWidget = QWidget()
+        containerWidget.setStyleSheet("background: transparent;")
+        containerLayout = QVBoxLayout(containerWidget)
+        containerLayout.setContentsMargins(0, 0, 0, 0)
+        containerLayout.setSpacing(12)
+        containerLayout.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
 
-        themeInfo = QVBoxLayout()
-        themeInfo.addWidget(SubtitleLabel(tr("app_theme"), self))
-        themeInfo.addWidget(CaptionLabel(tr("change_appearance"), self))
-        themeLayout.addLayout(themeInfo)
+        # Créer les cartes de paramètres
+        self._create_theme_card(containerLayout)
+        self._create_language_card(containerLayout)
+        self._create_restart_card(containerLayout)
+        self._create_animation_card(containerLayout)
+        self._create_transparency_card(containerLayout)
 
+        containerLayout.addStretch(1)
+        mainLayout.addWidget(containerWidget, 1)
+
+    def _card_style(self):
+        """Style glassmorphism pour les cartes"""
+        return """
+            CardWidget {
+                background-color: rgba(255, 255, 255, 0.1);
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                border-radius: 12px;
+            }
+        """
+
+    def _create_setting_card(self, title, description, control_widget):
+        """Créer une carte de paramètre standardisée"""
+        card = CardWidget(self)
+        card.setStyleSheet(self._card_style())
+        card.setFixedWidth(500)
+        card.setFixedHeight(70)
+
+        layout = QHBoxLayout(card)
+        layout.setContentsMargins(20, 12, 20, 12)
+        layout.setSpacing(16)
+
+        # Info à gauche
+        infoLayout = QVBoxLayout()
+        infoLayout.setSpacing(2)
+        infoLayout.setContentsMargins(0, 0, 0, 0)
+
+        titleLabel = SubtitleLabel(title, card)
+        descLabel = CaptionLabel(description, card)
+        descLabel.setStyleSheet("color: rgba(255, 255, 255, 0.6);")
+
+        infoLayout.addWidget(titleLabel)
+        infoLayout.addWidget(descLabel)
+        layout.addLayout(infoLayout, 1)
+
+        # Contrôle à droite
+        layout.addWidget(control_widget, 0, Qt.AlignRight | Qt.AlignVCenter)
+
+        return card
+
+    def _create_theme_card(self, container):
         self.themeCombo = ComboBox(self)
+        self.themeCombo.setFixedWidth(110)
         self.themeCombo.addItems(["System", "Light", "Dark"])
         self.themeCombo.setCurrentText(SETTINGS["theme"])
         self.themeCombo.currentTextChanged.connect(self.change_theme)
-        themeLayout.addWidget(self.themeCombo)
 
-        self.vBoxLayout.addWidget(self.themeCard)
+        card = self._create_setting_card(
+            tr("app_theme"),
+            tr("change_appearance"),
+            self.themeCombo
+        )
+        container.addWidget(card, 0, Qt.AlignHCenter)
 
-        # Language
-        self.langCard = CardWidget(self)
-        langLayout = QHBoxLayout(self.langCard)
-        langLayout.setContentsMargins(16, 16, 16, 16)
-
-        langInfo = QVBoxLayout()
-        langInfo.addWidget(SubtitleLabel(tr("language"), self))
-        langInfo.addWidget(CaptionLabel(tr("change_lang"), self))
-        langLayout.addLayout(langInfo)
-
+    def _create_language_card(self, container):
         self.langCombo = ComboBox(self)
+        self.langCombo.setFixedWidth(110)
         self.langCombo.addItems(["System", "en", "fr"])
         self.langCombo.setCurrentText(SETTINGS["language"])
         self.langCombo.currentTextChanged.connect(self.change_lang)
-        langLayout.addWidget(self.langCombo)
 
-        self.vBoxLayout.addWidget(self.langCard)
+        card = self._create_setting_card(
+            tr("language"),
+            tr("change_lang"),
+            self.langCombo
+        )
+        container.addWidget(card, 0, Qt.AlignHCenter)
 
-        # Auto Restart
-        self.restartCard = CardWidget(self)
-        restartLayout = QHBoxLayout(self.restartCard)
-        restartLayout.setContentsMargins(16, 16, 16, 16)
-
-        restartInfo = QVBoxLayout()
-        restartInfo.addWidget(SubtitleLabel(tr("auto_restart"), self))
-        restartInfo.addWidget(CaptionLabel(tr("restart_desc"), self))
-        restartLayout.addLayout(restartInfo)
-
+    def _create_restart_card(self, container):
         self.restartSwitch = SwitchButton(self)
         self.restartSwitch.setChecked(SETTINGS["auto_restart"])
         self.restartSwitch.checkedChanged.connect(self.toggle_restart)
-        restartLayout.addWidget(self.restartSwitch)
 
-        self.vBoxLayout.addWidget(self.restartCard)
+        card = self._create_setting_card(
+            tr("auto_restart"),
+            tr("restart_desc"),
+            self.restartSwitch
+        )
+        container.addWidget(card, 0, Qt.AlignHCenter)
 
-        # Animated Background
-        self.animBgCard = CardWidget(self)
-        animBgLayout = QHBoxLayout(self.animBgCard)
-        animBgLayout.setContentsMargins(16, 16, 16, 16)
-
-        animBgInfo = QVBoxLayout()
-        animBgInfo.addWidget(SubtitleLabel(tr("animated_bg"), self))
-        animBgInfo.addWidget(CaptionLabel(tr("animated_bg_desc"), self))
-        animBgLayout.addLayout(animBgInfo)
-
+    def _create_animation_card(self, container):
         self.animBgSwitch = SwitchButton(self)
         self.animBgSwitch.setChecked(SETTINGS["animated_bg"])
         self.animBgSwitch.checkedChanged.connect(self.toggle_animation)
-        animBgLayout.addWidget(self.animBgSwitch)
 
-        self.vBoxLayout.addWidget(self.animBgCard)
+        card = self._create_setting_card(
+            tr("animated_bg"),
+            tr("animated_bg_desc"),
+            self.animBgSwitch
+        )
+        container.addWidget(card, 0, Qt.AlignHCenter)
 
-        # Transparency
-        self.transparencyCard = CardWidget(self)
-        transparencyLayout = QHBoxLayout(self.transparencyCard)
-        transparencyLayout.setContentsMargins(16, 16, 16, 16)
-
-        transparencyInfo = QVBoxLayout()
-        transparencyInfo.addWidget(SubtitleLabel(tr("window_effect"), self))
-        transparencyInfo.addWidget(CaptionLabel(tr("window_effect_desc"), self))
-        transparencyLayout.addLayout(transparencyInfo)
-
+    def _create_transparency_card(self, container):
         self.transparencyCombo = ComboBox(self)
+        self.transparencyCombo.setFixedWidth(110)
         self.transparencyCombo.addItems(["None", "Mica", "Acrylic", "Aero"])
         self.transparencyCombo.setCurrentText(SETTINGS.get("transparency", "Mica"))
         self.transparencyCombo.currentTextChanged.connect(self.change_transparency)
-        transparencyLayout.addWidget(self.transparencyCombo)
 
-        self.vBoxLayout.addWidget(self.transparencyCard)
+        card = self._create_setting_card(
+            tr("transparency"),
+            tr("transparency_desc"),
+            self.transparencyCombo
+        )
+        container.addWidget(card, 0, Qt.AlignHCenter)
+
+
 
     def change_theme(self, text):
         from config import save_settings
@@ -602,7 +636,9 @@ class AboutPage(QFrame):
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(10)
 
-        logo = ImageLabel(os.path.join(BASE_DIR, "FontUltraInstaller.ico")) if os.path.exists("FontUltraInstaller.ico") else None
+        # Logo - utilise get_resource pour PyInstaller
+        icon_path = get_resource("assets", "logo.png")
+        logo = ImageLabel(icon_path) if os.path.exists(icon_path) else None
         if logo:
             logo.setFixedSize(64, 64)
             layout.addWidget(logo, 0, Qt.AlignCenter)

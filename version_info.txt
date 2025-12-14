@@ -1,0 +1,37 @@
+# UTF-8
+#
+# Fichier de version pour Ultra Font Installer
+# Utilisé par PyInstaller pour intégrer les métadonnées Windows
+
+VSVersionInfo(
+  ffi=FixedFileInfo(
+    filevers=(2, 0, 0, 0),
+    prodvers=(2, 0, 0, 0),
+    mask=0x3f,
+    flags=0x0,
+    OS=0x40004,
+    fileType=0x1,
+    subtype=0x0,
+    date=(0, 0)
+  ),
+  kids=[
+    StringFileInfo(
+      [
+        StringTable(
+          u'040C04B0',  # Français
+          [
+            StringStruct(u'CompanyName', u'JULAI'),
+            StringStruct(u'FileDescription', u'Ultra Font Installer - Installateur de polices moderne'),
+            StringStruct(u'FileVersion', u'2.0.0.0'),
+            StringStruct(u'InternalName', u'UltraFontInstaller'),
+            StringStruct(u'LegalCopyright', u'© 2025 JULAI. Tous droits réservés.'),
+            StringStruct(u'OriginalFilename', u'Ultra Font Installer.exe'),
+            StringStruct(u'ProductName', u'Ultra Font Installer'),
+            StringStruct(u'ProductVersion', u'2.0.0.0'),
+          ]
+        )
+      ]
+    ),
+    VarFileInfo([VarStruct(u'Translation', [1036, 1200])])  # Français
+  ]
+)
