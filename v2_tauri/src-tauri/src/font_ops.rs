@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
-use ttf_parser::{Face, name_id};
+use ttf_parser::{name_id, Face};
 
 #[derive(Serialize, Deserialize)]
 pub struct FontMetadata {
@@ -72,4 +72,30 @@ pub fn analyze_font(path: String) -> Result<FontMetadata, String> {
         version,
         format: format.to_string(),
     })
+}
+
+#[tauri::command]
+pub fn get_font_chars(path: String) -> Result<Vec<u32>, String> {
+    let data = fs::read(&path).map_err(|e| format!("Failed to read file: {}", e))?;
+    let face = Face::parse(&data, 0).map_err(|e| format!("Invalid font: {:?}", e))?;
+
+    let mut chars = Vec::new();
+
+    // Find a Unicode cmap subtable
+    if let Some(table) = face.tables().cmap {
+        for subtable in table.subtables {
+            if subtable.is_unicode() {
+                subtable.codepoints(|c| {
+                    chars.push(c);
+                });
+                break; // Use the first valid unicode subtable
+            }
+        }
+    }
+
+    // Sort to be nice
+    chars.sort();
+    chars.dedup();
+
+    Ok(chars)
 }

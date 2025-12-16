@@ -1,0 +1,91 @@
+/* Font Declarations */
+/* Retaining v1 fonts imports but defaulting to Recursive per user feedback */
+@font-face {
+  font-family: "Bowlby One SC";
+  src: url("../assets/fonts/BowlbyOneSC-Regular.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Avenir";
+  src: url("../assets/fonts/AvenirLTStd-Roman.otf") format("opentype");
+}
+
+@font-face {
+  font-family: "Inconsolata";
+  src: url("../assets/fonts/Inconsolata-Regular.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+
+:root {
+  /* Dimensions */
+  --radius-tile: 16px;
+  --radius-window: 12px;
+  --sidebar-width: 80px;
+
+  /* Transitions */
+  --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Fonts - Reverting to v2 Default "Recursive" as requested */
+  --font-title: "Recursive Variable", "Segoe UI", sans-serif;
+  --font-body: "Recursive Variable", "Segoe UI", sans-serif;
+  --font-mono: "Inconsolata", monospace;
+}
+
+/* Light Theme */
+:root[data-theme="light"] {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f3f3f3;
+  --text-primary: #000000;
+  --text-secondary: rgba(0, 0, 0, 0.6);
+  --accent-color: #00c2ff;
+  --accent-gradient: linear-gradient(135deg, #ff3e9d, #00c2ff);
+
+  --tile-bg: rgba(0, 0, 0, 0.05);
+  --tile-border: rgba(0, 0, 0, 0.1);
+  --tile-hover: rgba(0, 0, 0, 0.1);
+
+  /* v1 Background */
+  --bg-image: url("../assets/images/liquid_bg_light.png");
+}
+
+/* Dark Theme */
+:root[data-theme="dark"] {
+  --bg-primary: #121212; /* Fallback */
+  --bg-secondary: #1e1e1e;
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.7);
+  --accent-color: #00c2ff;
+  --accent-gradient: linear-gradient(135deg, #ff3e9d, #00c2ff);
+
+  --tile-bg: rgba(255, 255, 255, 0.05);
+  --tile-border: rgba(255, 255, 255, 0.1);
+  --tile-hover: rgba(255, 255, 255, 0.1);
+
+  /* v1 Background */
+  --bg-image: url("../assets/images/liquid_bg_dark.png");
+}
+
+body {
+  background-color: transparent; /* Changed to transparent for window radius */
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  margin: 0;
+  overflow: hidden;
+}
+
+/* Specific class for the main app container that holds the background */
+.app-container {
+  background-color: var(--bg-primary);
+  background-image: var(--bg-image);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+
+  border-radius: var(--radius-window);
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5); /* Software shadow */
+  border: 1px solid var(--tile-border); /* Subtle border for dark mode definition */
+}
